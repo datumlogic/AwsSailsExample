@@ -8,9 +8,13 @@
     "grunt": "0.4.1",
     "sails-disk": "~0.9.3",
     "ejs": "0.8.4",
-    "optimist": "0.3.4"
+    "optimist": "0.3.4",
+    "bcrypt": "~0.7.7"
   },
   "scripts": {
     "start": "sails lift"
+  },
+  "devDependencies": {
+    "grunt-simple-mocha": "~0.4.0"
   }
 }

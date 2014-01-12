@@ -9,10 +9,30 @@
 module.exports = {
 
   attributes: {
-  	
-  	/* e.g.
-  	nickname: 'string'
-  	*/
+
+      from: {
+          type: 'string',
+          required: true,
+          index: true
+      },
+
+      to: {
+          type: 'string',
+          required: true,
+          index: true
+      },
+
+      text: {
+          type: 'string',
+          required: true,
+          minLength: 1,
+          maxLength: 144
+      },
+
+      attachment: {
+          type: 'string',
+          required: false
+      }
     
   }
 
