@@ -23,6 +23,8 @@ module.exports = {
                     if (err) {
                         res.view({errors:["Incorrect email or password."]});
                     } else {
+                        req.session.user = user;
+                        req.session.authenticated = true;
                         res.redirect('/');
                     }
                 });
