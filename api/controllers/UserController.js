@@ -8,9 +8,7 @@ module.exports = {
     _config: {},
 
     signIn: function (req, res) {
-        console.log(req.body);
         var body = req.body;
-
         if (!body.email && !body.password) {
             res.view();
         } else if (!body.email) {
@@ -18,14 +16,22 @@ module.exports = {
         } else if (!body.password) {
             res.view({errors:["Missing password"]});
         } else {
-            User.findOne({email: body.email, password: body.email})
+            User.findOne({email: body.email})
                 .done(function (err, user) {
                     if (err) {
+                        res.view({errors:[err]});
+                    } else if (!user) {
                         res.view({errors:["Incorrect email or password."]});
                     } else {
-                        req.session.user = user;
-                        req.session.authenticated = true;
-                        res.redirect('/');
+                        user.verifyPassword(body.password, function (err, match) {
+                            if (err || !match) {
+                                res.view({errors:["Incorrect email or password."]});
+                            } else {
+                                req.session.user = user;
+                                req.session.authenticated = true;
+                                res.redirect('/');
+                            }
+                        });
                     }
                 });
         }
