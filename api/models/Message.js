@@ -3,37 +3,37 @@
  *
  * @module      :: Model
  * @description :: A short summary of how this model works and what it represents.
- * @docs		:: http://sailsjs.org/#!documentation/models
+ * @docs        :: http://sailsjs.org/#!documentation/models
  */
 
 module.exports = {
 
-  attributes: {
+    schema: true,
+    attributes: {
 
-      from: {
-          type: 'string',
-          required: true,
-          index: true
-      },
+        from: {
+            type: 'integer',
+            required: true,
+            index: true
+        },
 
-      to: {
-          type: 'string',
-          required: true,
-          index: true
-      },
+        to: {
+            type: 'integer',
+            required: true,
+            index: true
+        },
 
-      text: {
-          type: 'string',
-          required: true,
-          minLength: 1,
-          maxLength: 144
-      },
+        text: {
+            type: 'string',
+            required: true,
+            minLength: 1,
+            maxLength: 144
+        },
 
-      attachment: {
-          type: 'string',
-          required: false
-      }
-    
-  }
+        sendTime: {
+            type: 'datetime',
+            required: true
+        }
+    }
 
 };

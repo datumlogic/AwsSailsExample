@@ -1,3 +1,5 @@
+/*globals Message:false*/
+
 /**
  * MessageController
  *
@@ -7,6 +9,57 @@
 
 module.exports = {
 
-    _config: {}
+    _config: {
 
+    },
+
+    send: function (req, res) {
+        var user = req.session.user,
+            to = req.param('to'),
+            text = req.param('text');
+
+        if (!to || !parseInt(to)) {
+            res.send("Missing param 'to'", 400);
+        } else if (!text) {
+            res.send("Missing param 'text'", 400);
+        } else {
+            Message.create({
+                from: user.id,
+                to: parseInt(to),
+                text: text,
+                sendTime: new Date()
+            }).done(function (err, msg) {
+                    if (err) {
+                        console.log(err);
+                        res.send(err, 400);
+                    } else {
+                        res.send(msg);
+                    }
+                });
+        }
+    },
+
+    search: function (req, res) {
+        var where, user = req.session.user;
+        where = req.param('where');
+        if (!where) {
+            res.send("Missing param 'where'", 400);
+        } else {
+            try {
+                where = JSON.parse(where);
+                Message.find()
+                    .where(where)
+                    .done(function (err, msgs) {
+                        if (err) {
+                            console.log(err);
+                            res.send(err, 400);
+                        } else {
+                            res.send(msgs);
+                        }
+                    });
+            } catch (ex) {
+                res.send(ex.toString(), 400);
+            }
+        }
+    }
 };
