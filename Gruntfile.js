@@ -140,13 +140,14 @@ module.exports = function (grunt) {
 
     jst: {
       dev: {
-
-        // To use other sorts of templates, specify the regexp below:
-        // options: {
-        //   templateSettings: {
-        //     interpolate: /\{\{(.+?)\}\}/g
-        //   }
-        // },
+        options: {
+          processName: function(filename) {
+            return filename
+                .replace('.html', '')
+                .replace(/.*\//, "")
+                .toLowerCase();
+          }
+        },
 
         files: {
           '.tmp/public/jst.js': templateFilesToInject

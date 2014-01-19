@@ -22,15 +22,20 @@ module.exports = {
                 res.send(500);
             } else {
                 console.log(data);
-                res.format({
-                    html: function(){ res.view({items: data}); },
-                    json: function(){ res.send(data); }
-                });
+                if (req.socket) {
+                    Message.subscribe(req.socket); //listen for creates
+                    Message.subscribe(req.socket, data); //listen for updates or deletes on these only
+                }
+                if (req.isJson || req.isSocket) {
+                    res.send(data);
+                } else {
+                    res.view({items: data});
+                }
             }
         });
     },
 
-    send: function (req, res) {
+    create: function (req, res) {
         var user = req.session.user,
             to = req.param('to'),
             text = req.param('text');
@@ -50,6 +55,7 @@ module.exports = {
                         console.log(err);
                         res.send(err, 400);
                     } else {
+                        Message.publishCreate(msg.toJSON());
                         res.send(msg);
                     }
                 });

@@ -1,11 +1,61 @@
-<table class="table">
-<% _.each(items, function (item) { %>
-<tr>
-    <% _.each(item, function (value, key) { %>
-        <td>
-            <%=key%>:<%=value%>
-        </td>
-    <% }) %>
-</tr>
-<% }) %>
-</table>
+<table id="viewItems" class="table"></table>
+<form>
+    <label for="text">Text:</label>
+    <input name="text" type="text" />
+    <label for="to">To:</label>
+    <input name="to" type="number" />
+    <button>Create</button>
+</form>
+<script>
+    $(function () {
+        var itemName = "message";
+        var table = $('#viewItems.table'),
+                form = $('form');
+        socket.get("/" + itemName, function (items) {
+            _.each(items, function (item) {
+                table.append(JST[itemName](item))
+                        .find('#message-' + item.id)
+                        .find('.close').click(remove.bind(this, item.id));
+            });
+        });
+        socket.on('message', function (item) {
+            if (item.model === 'message') {
+                switch(item.verb) {
+                    case 'create':
+                        table.append(JST[itemName](item.data))
+                                .find('#message-' + item.id)
+                                .find('.close').click(remove.bind(this, item.id));
+                        break;
+                    case 'destroy':
+                        table.find('#message-' + item.id).remove();
+                        break;
+                    case 'update':
+                        table.find('#message-' + item.id)
+                                .replaceWith(JST[itemName](item.data))
+                                .find('.close').click(remove.bind(this, item.id));
+                        break;
+                    default:
+                        console.log(item);
+                        break;
+                }
+            } else {
+                console.log(item);
+            }
+        });
+        form.submit(function (e) {
+            e.preventDefault();
+            var data = _.reduce(form.serializeArray(), function (result, obj, key) {
+                result[obj.name] = obj.value;
+                return result;
+            }, {});
+            socket.post("/" + itemName, data, function (m1) {
+                console.log("post", m1);
+            });
+        });
+        function remove (id) {
+            socket.delete("/" + itemName + "/" + id, function (m1) {
+                console.log("destroy", m1);
+            });
+        }
+    })
+</script>
