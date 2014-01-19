@@ -99,5 +99,17 @@ module.exports = {
                 res.send(404);
             }
         });
+    },
+
+    validationSuccessful: function (req, res) {
+        res.view();
+    },
+
+    validationFailed: function (req, res) {
+        res.view();
+    },
+
+    validationNotRequired: function (req, res) {
+        res.view();
     }
 };

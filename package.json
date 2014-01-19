@@ -34,7 +34,8 @@
     "optimist": "~0.6.0",
     "sails": "*",
     "sails-disk": "*",
-    "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master"
+    "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master",
+    "grunt": "~0.4.2"
   },
   "scripts": {
     "start": "sails lift"
