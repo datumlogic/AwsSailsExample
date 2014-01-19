@@ -1,22 +1,20 @@
-<div class="signUpForm">
-    <form action="signUp" method="post" autocomplete="on">
-        <p>
-            <label for="email" class="uname" data-icon="u" >Your email</label>
-            <input id="email" name="email" required placeholder="eg. someone@somewhere.com" />
-        </p>
-        <p>
-            <label for="password1" class="youpasswd" data-icon="p"> Your password </label>
-            <input id="password" name="password" required type="password" placeholder="eg. X8df!90EO" />
-        </p>
-        <p>
-            <label for="password2" class="youpasswd" data-icon="p"> Your password </label>
-            <input id="password2" name="password2" required type="password" placeholder="eg. X8df!90EO again" />
-        </p>
-        <p>
-            A validation email will be sent to your address.
-        </p>
-        <p class="login button">
-            <input type="submit" value="Sign Up" />
-        </p>
-    </form>
-</div>
+<form action="signUp" method="post" autocomplete="on" role="form" class="form-horizontal">
+    <div class="form-group col-xs-8">
+        <label for="email" class="control-label" data-icon="u" >Your email</label>
+        <input id="email" name="email" class="form-control input-lg" required placeholder="Email" />
+    </div>
+    <div class="form-group col-xs-8">
+        <label for="password1" class="control-label" data-icon="p"> Your password </label>
+        <input id="password" name="password" class="form-control input-lg" required type="password" placeholder="Password" />
+    </div>
+    <div class="form-group col-xs-8">
+        <label for="password2" class="control-label" data-icon="p"> Your password verified </label>
+        <input id="password2" name="password2" class="form-control input-lg" required type="password" placeholder="Password again" />
+    </div>
+    <div class="form-group col-xs-8">
+        A validation email will be sent to your address.
+    </div>
+    <div class="col-xs-8">
+        <button type="submit" class="btn btn-default btn-lg">Sign Up</button>
+    </div>
+</form>

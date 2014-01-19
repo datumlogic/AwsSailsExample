@@ -90,6 +90,7 @@ module.exports = {
                         res.redirect('user/validationFailed');
                     } else {
                         req.session.user = user;
+                        req.session.authenticated = true;
                         res.redirect('user/validationSuccessful');
                     }
                 });

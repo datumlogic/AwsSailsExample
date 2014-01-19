@@ -1,0 +1,11 @@
+<table class="table">
+<% _.each(items, function (item) { %>
+<tr>
+    <% _.each(item, function (value, key) { %>
+        <td>
+            <%=key%>:<%=value%>
+        </td>
+    <% }) %>
+</tr>
+<% }) %>
+</table>
