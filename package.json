@@ -1,35 +1,42 @@
 {
-    "name": "AwsSailsExample",
-    "version": "0.0.1",
-    "private": true,
-    "description": "a Sails application",
-    "license": "MIT",
-    "contributors": [],
-    "homepage": "https://github.com/TakenPilot/AwsSailsExample",
-    "repository": {
-        "type": "git",
-        "url": "git://github.com/TakenPilot/AwsSailsExample"
-    },
-    "engines": { "node" : ">=0.10.3" },
-    "keywords": ["sails", "aws", "example"],
-    "author": {
-        "name": "Dane Stuckel",
-        "email": "dane.stuckel@gmail.com>"
-    },
-    "bugs": {
-        "web": "http://github.com/TakenPilot/AwsSailsExample/issues/"
-    },
-    "dependencies": {
-        "underscore": "~1.5.2",
-        "aws-sdk": "~2.0.0-rc8",
-        "bcrypt": "~0.7.7",
-        "ejs": "0.8.4",
-        "optimist": "0.3.4",
-        "sails": "0.9.8",
-        "sails-disk": "~0.9.3",
-        "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master"
-    },
-    "scripts": {
-        "start": "sails lift"
-    }
+  "name": "AwsSailsExample",
+  "version": "0.0.1",
+  "private": true,
+  "description": "a Sails application",
+  "license": "MIT",
+  "contributors": [],
+  "homepage": "https://github.com/TakenPilot/AwsSailsExample",
+  "repository": {
+    "type": "git",
+    "url": "git://github.com/TakenPilot/AwsSailsExample"
+  },
+  "engines": {
+    "node": "0.10.x",
+    "npm": "1.2.x"
+  },
+  "keywords": [
+    "sails",
+    "aws",
+    "example"
+  ],
+  "author": {
+    "name": "Dane Stuckel",
+    "email": "dane.stuckel@gmail.com>"
+  },
+  "bugs": {
+    "web": "http://github.com/TakenPilot/AwsSailsExample/issues/"
+  },
+  "dependencies": {
+    "underscore": "*",
+    "aws-sdk": "*",
+    "bcrypt": "*",
+    "ejs": "~0.8.5",
+    "optimist": "~0.6.0",
+    "sails": "*",
+    "sails-disk": "*",
+    "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master"
+  },
+  "scripts": {
+    "start": "sails lift"
+  }
 }
