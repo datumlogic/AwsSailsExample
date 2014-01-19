@@ -81,20 +81,20 @@ module.exports = {
             var validation = user && user.validation,
                 guid = validation && validation.guid;
             if (user.validated) {
-                res.view('user/validationNotRequired');
+                res.redirect('user/validationNotRequired');
             } else if (req.query.k === guid ) {
                 user.validated = new Date().getTime();
                 user.save(function (err, user) {
                     if (err) {
                         console.error(JSON.stringify([err]));
-                        res.view('user/validationFailed');
+                        res.redirect('user/validationFailed');
                     } else {
                         req.session.user = user;
-                        res.view('user/validationSuccessful');
+                        res.redirect('user/validationSuccessful');
                     }
                 });
             } else if (req.query.k) {
-                res.view('user/validationFailed');
+                res.redirect('user/validationFailed');
             } else {
                 res.send(404);
             }
