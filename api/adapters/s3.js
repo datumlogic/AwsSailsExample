@@ -1,10 +1,42 @@
-var aws = require('awk-sdk'),
+var AWS = require('awk-sdk'),
     _ = require('underscore');
 
 //{ "accessKeyId": "akid", "secretAccessKey": "secret", "region": "us-west-2" }
-aws.config.loadFromPath('./config.json');
+AWS.config.loadFromPath('./config.json');
 
 module.exports = (function() {
+
+    // You'll want to maintain a reference to each collection
+    // (aka model) that gets registered with this adapter.
+    var _modelReferences = {};
+
+
+
+    // You may also want to store additional, private data
+    // per-collection (esp. if your data store uses persistent
+    // connections).
+    //
+    // Keep in mind that models can be configured to use different databases
+    // within the same app, at the same time.
+    //
+    // i.e. if you're writing a MariaDB adapter, you should be aware that one
+    // model might be configured as `host="localhost"` and another might be using
+    // `host="foo.com"` at the same time.  Same thing goes for user, database,
+    // password, or any other config.
+    //
+    // You don't have to support this feature right off the bat in your
+    // adapter, but it ought to get done eventually.
+    //
+    // Sounds annoying to deal with...
+    // ...but it's not bad.  In each method, acquire a connection using the config
+    // for the current model (looking it up from `_modelReferences`), establish
+    // a connection, then tear it down before calling your method's callback.
+    // Finally, as an optimization, you might use a db pool for each distinct
+    // connection configuration, partioning pools for each separate configuration
+    // for your adapter (i.e. worst case scenario is a pool for each model, best case
+    // scenario is one single single pool.)  For many databases, any change to
+    // host OR database OR user OR password = separate pool.
+    var _dbPools = {};
 
     var adapter = {
         syncable: true, // to track schema internally
@@ -18,454 +50,386 @@ module.exports = (function() {
             schema: false,
             nativeParser: false,
             safe: true,
-            url: null,
-            replSet: {}
+            url: null
         },
 
+        /**
+         *
+         * This method runs when a model is initially registered
+         * at server-start-time.  This is the only required method.
+         *
+         * @param  {{identity:*}}   collection [description]
+         * @param  {Function} cb         [description]
+         */
         registerCollection: function(collection, cb) {
-            var self = this;
 
-            //initialize
+            // Keep a reference to this collection
+            _modelReferences[collection.identity] = collection;
 
             return cb();
         },
 
+
+        /**
+         * Fired when a model is unregistered, typically when the server
+         * is killed. Useful for tearing-down remaining open connections,
+         * etc.
+         *
+         * @param  {Function} cb [description]
+         * @return {[type]}      [description]
+         */
         teardown: function(cb) {
-            if(cb) cb();
+
+
+            cb();
         },
 
-        describe: function(collectionName, cb) {
-            var des = Object.keys(dbs[collectionName].schema).length === 0 ?
-                null : dbs[collectionName].schema;
-            return cb(null, des);
-        },
 
+
+        /**
+         *
+         * REQUIRED method if integrating with a schemaful
+         * (SQL-ish) database.
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   definition     [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
         define: function(collectionName, definition, cb) {
-            spawnConnection(function __DEFINE__(connection, cb) {
-                connection.createCollection(collectionName, function __DEFINE__(err, result) {
-                    if (err) return cb(err);
 
-                    // Use the collection to perform index queries
-                    connection.collection(collectionName, function(err, collection) {
-                        var index;
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-                        // Clone the definition
-                        var def = _.clone(definition);
-
-                        function processKey(key, cb) {
-
-                            // Remove any autoIncement keys, Mongo won't support them without
-                            // a hacky additional collection
-                            if(def[key].autoIncrement) {
-                                delete def[key].autoIncrement;
-                            }
-
-                            // Handle Unique Key
-                            if(def[key].unique) {
-                                index = {};
-                                index[key] = 1;
-
-                                return collection.ensureIndex(index, { unique: true, sparse: true }, function(err) {
-                                    if(err) return cb(err);
-                                    def[key].indexed = true;
-                                    cb();
-                                });
-                            }
-
-                            // Add non-unique indexes
-                            if(def[key].index && !def[key].unique) {
-                                index = {};
-                                index[key] = 1;
-
-                                return collection.ensureIndex(index, { sparse: true }, function(err) {
-                                    if(err) return cb(err);
-                                    def[key].indexed = true;
-                                    cb();
-                                });
-                            }
-
-                            return cb();
-                        }
-
-                        var keys = Object.keys(def);
-
-                        // Loop through the def and process attributes for each key
-                        async.forEach(keys, processKey, function(err) {
-                            if(err) return cb(err);
-                            dbs[collectionName].schema = def;
-                            cb(null, dbs[collectionName].schema);
-                        });
-                    });
-                });
-            }, dbs[collectionName].config, cb);
-        },
-
-        drop: function(collectionName, cb) {
-            spawnConnection(function __DROP__(connection, cb) {
-                connection.dropCollection(collectionName, function __DEFINE__(err, result) {
-                    if (err) return cb(err);
-                    cb(null, result);
-                });
-            }, dbs[collectionName].config, cb);
+            // Define a new "table" or "collection" schema in the data store
+            cb();
         },
 
         /**
-         * Give access to a native mongo collection object for running custom
-         * queries.
          *
-         * Returns (err, collection, cb);
+         * REQUIRED method if integrating with a schemaful
+         * (SQL-ish) database.
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
          */
+        describe: function(collectionName, cb) {
 
-        native: function(collectionName, cb) {
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-            if(Object.keys(connection).length > 0) {
-                return afterwards();
-            }
-
-            createConnection(dbs[collectionName].config, function(err, db) {
-                connection = db;
-                afterwards();
-            });
-
-            function afterwards() {
-                connection.collection(collectionName, function(err, collection) {
-                    return cb(err, collection);
-                });
-            }
+            // Respond with the schema (attributes) for a collection or table in the data store
+            var attributes = {};
+            cb(null, attributes);
         },
 
-        create: function(collectionName, data, cb) {
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
 
-                    // Handle an ID passed in so that we don't end up with both _id and id properties
-                    if(data.id) {
+        /**
+         *
+         *
+         * REQUIRED method if integrating with a schemaful
+         * (SQL-ish) database.
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   relations      [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
+        drop: function(collectionName, relations, cb) {
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-                        // Check if data.id looks like a MongoID
-                        if (_.isString(data.id) && data.id.match(/^[a-fA-F0-9]{24}$/)) {
-                            data._id = new mongodb.ObjectID.createFromHexString(data.id);
-                        }
-
-                        // Else just pass thru to data._id
-                        else {
-                            data._id = data.id;
-                        }
-
-                        delete data.id;
-                    };
-
-                    collection.insert(data, function(err, results) {
-                        if (err) return cb(err);
-                        cb(err, utils.rewriteIds(results)[0]);
-                    });
-                });
-            }, dbs[collectionName].config, cb);
+            // Drop a "table" or "collection" schema from the data store
+            cb();
         },
 
-        createEach: function(collectionName, data, cb) {
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
 
-                    if(Array.isArray(data)) {
 
-                        data.forEach(function(val) {
 
-                            // Handle an ID passed in so that we don't end up with both _id and id properties
-                            if(val.id) {
+        // OVERRIDES NOT CURRENTLY FULLY SUPPORTED FOR:
+        //
+        // alter: function (collectionName, changes, cb) {},
+        // addAttribute: function(collectionName, attrName, attrDef, cb) {},
+        // removeAttribute: function(collectionName, attrName, attrDef, cb) {},
+        // alterAttribute: function(collectionName, attrName, attrDef, cb) {},
+        // addIndex: function(indexName, options, cb) {},
+        // removeIndex: function(indexName, options, cb) {},
 
-                                // Check if val.id looks like a MongoID
-                                if (_.isString(val.id) && val.id.match(/^[a-fA-F0-9]{24}$/)) {
-                                    val._id = new mongodb.ObjectID.createFromHexString(val.id);
-                                }
 
-                                // Else just pass thru to val._id
-                                else {
-                                    val._id = val.id;
-                                }
 
-                                delete val.id;
-                            };
-                        });
-                    }
-
-                    collection.insert(data, function(err, results) {
-                        if (err) return cb(err);
-                        cb(null, utils.rewriteIds(results));
-                    });
-                });
-            }, dbs[collectionName].config, cb);
-        },
-
+        /**
+         *
+         * REQUIRED method if users expect to call Model.find(), Model.findOne(),
+         * or related.
+         *
+         * You should implement this method to respond with an array of instances.
+         * Waterline core will take care of supporting all the other different
+         * find methods/usages.
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   options        [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
         find: function(collectionName, options, cb) {
 
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-                    // If we are summing or averaging, we use an aggregate query
-                    if(options.groupBy || options.sum || options.average || options.min || options.max) {
+            // Options object is normalized for you:
+            //
+            // options.where
+            // options.limit
+            // options.skip
+            // options.sort
 
-                        // Check if we have calculations to do
-                        if(!options.sum && !options.average && !options.min && !options.max) {
-                            return cb(new Error('Cannot groupBy without a calculation'));
-                        }
+            // Filter, paginate, and sort records from the datastore.
+            // You should end up w/ an array of objects as a result.
+            // If no matches were found, this will be an empty array.
 
-                        var groupBy;
-                        if (options.groupBy) {
-                            groupBy = {};
-                            options.groupBy.forEach(function(key){
-                                groupBy[key] = '$' + key;
-                            });
-                        } else {
-                            groupBy = null;
-                        }
-
-                        var aggregateGroup = { _id: groupBy};
-
-                        if (options.sum instanceof Array) {
-                            options.sum.forEach(function(opt){
-                                aggregateGroup[opt] = { $sum: '$' + opt }
-                            });
-                        }
-
-                        if (options.average instanceof Array) {
-                            options.average.forEach(function(opt){
-                                aggregateGroup[opt] = { $avg: '$' + opt }
-                            });
-                        }
-
-                        if (options.min instanceof Array) {
-                            options.min.forEach(function(opt){
-                                aggregateGroup[opt] = { $min: '$' + opt }
-                            });
-                        }
-
-                        if (options.max instanceof Array) {
-                            options.max.forEach(function(opt){
-                                aggregateGroup[opt] = { $max: '$' + opt }
-                            });
-                        }
-
-                        // Order matters, $match must come before $group in the object
-                        var aggregate = [];
-
-                        // Rewrite where criteria
-                        if(options.where) {
-                            var where = {where: options.where };
-                            options.where = criteria.rewriteCriteria(where, schemaStash[collectionName]).where;
-                            aggregate.push({$match: options.where});
-                        }
-
-                        aggregate.push({$group: aggregateGroup});
-
-                        collection.aggregate(aggregate, function(err, results){
-                            // Results have grouped by values under _id, so we extract them
-                            results = results.map(function(result){
-                                for(var key in result._id) {
-                                    result[key] = result._id[key];
-                                }
-                                delete result._id;
-                                return result;
-                            });
-
-                            cb(err, results);
-                        });
-                    } else {
-                        // Transform criteria to a mongo query
-                        options = criteria.rewriteCriteria(options, schemaStash[collectionName]);
-
-                        collection.find.apply(collection, criteria.parseFindOptions(options))
-                            .toArray(function(err, docs) {
-                                cb(err, utils.rewriteIds(docs));
-                            });
-
-                    }
-                });
-            }, dbs[collectionName].config, cb);
+            var s3 = new AWS.S3();
+            s3.listObjects({bucket: "", key: ""}, function (err, data) {
+                // Respond with error or an array of updated records.
+                console.log(err, data);
+                cb(err, data);
+            });
+            s3.getObject({
+                Bucket: "",
+                //ETag has to match this or 412
+                IfMatch: "",
+                //Must be modified or 304
+                IfModifiedSince: new Date(),
+                //Only if ETag is different or 304
+                IfNoneMatch: "",
+                Key: "",
+                ResponseCacheControl: "",
+                ResponseContentDisposition: "",
+                ResponseContentEncoding: "",
+                ResponseContentLanguage: "",
+                ResponseContentType: "",
+                ResponseExpires: "",
+                VersionId: ""
+            }, function (err, data) {
+                // Respond with error or an array of updated records.
+                console.log(err, data);
+                cb(err, data);
+            });
         },
 
+        /**
+         *
+         * REQUIRED method if users expect to call Model.create() or any methods
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   values         [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
+        create: function(collectionName, values, cb) {
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
+
+            // Create a single new model (specified by `values`)
+            var s3 = new AWS.S3();
+            s3.putObject({
+                //private|public-read|public-read-write|authenticated-read|
+                // bucket-owner-read|bucket-owner-full-control
+                ACL: "",
+                Body: new Buffer(),
+                Bucket: "",
+                CacheControl: "",
+                ContentDisposition: "",
+                ContentLanguage: "",
+                ContentLength: "",
+                ContentMD5: "",
+                Expires: new Date(),
+                GrantFullControl: "",
+                GrantRead: "",
+                GrantReadACP: "",
+                GrantWriteACP: "",
+                Key: "",
+                //map<string>
+                Metadata: new Map(),
+                ServerSideEncryption: "AES256",
+                //STANDARD|REDUCED_REDUNDANCY
+                StorageClass: "",
+                WebsiteRedirectLocation: ""
+            }, function (err, data) {
+                var eTag = data.ETag,
+                    expiration = data.Expiration,
+                    serverSideEncryption = data.ServerSideEncryption,
+                    versionId = data.VersionId;
+                    console.log(eTag, expiration, serverSideEncryption, versionId);
+                cb(null, data);
+            });
+        },
+
+
+
+        //
+
+        /**
+         *
+         *
+         * REQUIRED method if users expect to call Model.update()
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   options        [description]
+         * @param  {[type]}   values         [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
         update: function(collectionName, options, values, cb) {
-            var self = this;
 
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-                    // Transform criteria to a mongo query
-                    options = criteria.rewriteCriteria(options);
+            // 1. Filter, paginate, and sort records from the datastore.
+            //    You should end up w/ an array of objects as a result.
+            //    If no matches were found, this will be an empty array.
+            //
+            // 2. Update all result records with `values`.
+            //
+            // (do both in a single query if you can-- it's faster)
 
-                    // Mongo doesn't allow ID's to be updated
-                    if(values.id) delete values.id;
-                    if(values._id) delete values._id;
-
-                    // Transform values to a mongo query
-                    values = criteria.rewriteValues(values);
-
-                    // Lookup records being updated and grab their ID's
-                    // Useful for later looking up the record after an insert
-                    // Required because options may not contain an ID
-                    collection.find(options.where).toArray(function(err, records) {
-                        if(err) return cb(err);
-                        if(!records) return cb(new Error('Could not find any records to update'));
-
-                        // Build an array of records
-                        var updatedRecords = [];
-
-                        records.forEach(function(record) {
-                            updatedRecords.push(record._id);
-                        });
-
-                        // Update the records
-                        collection.update(options.where, values, { multi: true }, function(err, result) {
-                            if(err) return cb(err);
-
-                            // Look up newly inserted records to return the results of the update
-                            collection.find({ _id: { '$in': updatedRecords }}).toArray(function(err, records) {
-                                if(err) return cb(err);
-                                cb(null, utils.rewriteIds(records));
-                            });
-                        });
-                    });
-                });
-            }, dbs[collectionName].config, cb);
+            throw new Error("Not supported yet.");
+            /*
+            var s3 = new AWS.S3();
+            s3.getObject({bucket: "", key: ""}, function (err, data) {
+                // Respond with error or an array of updated records.
+                console.log(err, data);
+                cb(err, data);
+            });
+            */
         },
 
+        /**
+         *
+         * REQUIRED method if users expect to call Model.destroy()
+         *
+         * @param  {[type]}   collectionName [description]
+         * @param  {[type]}   options        [description]
+         * @param  {Function} cb             [description]
+         * @return {[type]}                  [description]
+         */
         destroy: function(collectionName, options, cb) {
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
 
-                    // Transform criteria to a mongo query
-                    options = criteria.rewriteCriteria(options);
+            // If you need to access your private data for this collection:
+            var collection = _modelReferences[collectionName];
 
-                    collection.remove(options.where, function(err, results) {
-                        if(err) return cb(err);
+            // 1. Filter, paginate, and sort records from the datastore.
+            //    You should end up w/ an array of objects as a result.
+            //    If no matches were found, this will be an empty array.
+            //
+            // 2. Destroy all result records.
+            //
+            // (do both in a single query if you can-- it's faster)
 
-                        // Force to array to meet Waterline API
-                        var resultsArray = [];
-
-                        // If result is not an array return an array
-                        if(!Array.isArray(results)) {
-                            resultsArray.push({ id: results });
-                            return cb(null, resultsArray);
-                        }
-
-                        // Create a valid array of IDs
-                        results.forEach(function(result) {
-                            resultsArray.push({ id: result });
-                        });
-
-                        cb(null, utils.rewriteIds(resultArray));
-                    });
-                });
-            }, dbs[collectionName].config, cb);
+            var s3 = new AWS.S3();
+            s3.destroyObject({bucket: "", key: ""}, function (err, data) {
+                // Respond with error or an array of updated records.
+                console.log(err, data);
+                cb(err, data);
+            });
         },
 
-        // Stream one or more models from the collection
-        // using where, limit, skip, and order
-        // In where: handle `or`, `and`, and `like` queries
-        stream: function(collectionName, options, stream) {
-            spawnConnection(function(connection, cb) {
-                connection.collection(collectionName, function(err, collection) {
-                    if (err) return cb(err);
 
-                    // Transform criteria to a mongo query
-                    options = criteria.rewriteCriteria(options);
 
-                    var dbStream = collection.find.apply(collection, criteria.parseFindOptions(options)).stream();
+        /*
+         **********************************************
+         * Optional overrides
+         **********************************************
 
-                    // For each data item
-                    dbStream.on('data', function(item) {
+         // Optional override of built-in batch create logic for increased efficiency
+         // (since most databases include optimizations for pooled queries, at least intra-connection)
+         // otherwise, Waterline core uses create()
+         createEach: function (collectionName, arrayOfObjects, cb) { cb(); },
 
-                        // Pause stream
-                        dbStream.pause();
+         // Optional override of built-in findOrCreate logic for increased efficiency
+         // (since most databases include optimizations for pooled queries, at least intra-connection)
+         // otherwise, uses find() and create()
+         findOrCreate: function (collectionName, arrayOfAttributeNamesWeCareAbout, newAttributesObj, cb) { cb(); },
+         */
 
-                        var obj = utils.rewriteIds([item])[0];
 
-                        stream.write(obj, function() {
-                            dbStream.resume();
-                        });
+        /*
+         **********************************************
+         * Custom methods
+         **********************************************
 
-                    });
+         ////////////////////////////////////////////////////////////////////////////////////////////////////
+         //
+         // > NOTE:  There are a few gotchas here you should be aware of.
+         //
+         //    + The collectionName argument is always prepended as the first argument.
+         //      This is so you can know which model is requesting the adapter.
+         //
+         //    + All adapter functions are asynchronous, even the completely custom ones,
+         //      and they must always include a callback as the final argument.
+         //      The first argument of callbacks is always an error object.
+         //      For core CRUD methods, Waterline will add support for .done()/promise usage.
+         //
+         //    + The function signature for all CUSTOM adapter methods below must be:
+         //      `function (collectionName, options, cb) { ... }`
+         //
+         ////////////////////////////////////////////////////////////////////////////////////////////////////
 
-                    // Handle error, an 'end' event will be emitted after this as well
-                    dbStream.on('error', function(err) {
-                        stream.end(err); // End stream
-                        cb(err); // Close connection
-                    });
 
-                    // all rows have been received
-                    dbStream.on('end', function() {
-                        stream.end();
-                        cb();
-                    });
-                });
-            }, dbs[collectionName].config);
-        },
+         // Custom methods defined here will be available on all models
+         // which are hooked up to this adapter:
+         //
+         // e.g.:
+         //
+         foo: function (collectionName, options, cb) {
+         return cb(null,"ok");
+         },
+         bar: function (collectionName, options, cb) {
+         if (!options.jello) return cb("Failure!");
+         else return cb();
+         }
 
-        identity: 'sails-mongo'
+         // So if you have three models:
+         // Tiger, Sparrow, and User
+         // 2 of which (Tiger and Sparrow) implement this custom adapter,
+         // then you'll be able to access:
+         //
+         // Tiger.foo(...)
+         // Tiger.bar(...)
+         // Sparrow.foo(...)
+         // Sparrow.bar(...)
+
+
+         // Example success usage:
+         //
+         // (notice how the first argument goes away:)
+         Tiger.foo({}, function (err, result) {
+         if (err) return console.error(err);
+         else console.log(result);
+
+         // outputs: ok
+         });
+
+         // Example error usage:
+         //
+         // (notice how the first argument goes away:)
+         Sparrow.bar({test: 'yes'}, function (err, result){
+         if (err) console.error(err);
+         else console.log(result);
+
+         // outputs: Failure!
+         })
+
+
+
+
+         */
+
+
     };
 
-    function spawnConnection(logic, config, cb) {
 
-        // Grab the existing connection
-        if(Object.keys(connection).length > 0) {
-            return afterwards();
-        }
-
-        createConnection(config, function(err, db) {
-            if(err) console.log(err);
-            connection = db;
-            afterwards();
-        });
-
-        function afterwards() {
-            logic(connection, function(err, result) {
-                if(cb) return cb(err, result);
-            });
-        }
-    }
-
-    function createConnection(config, cb) {
-        var safe = config.safe ? 1 : 0,
-            serverOptions = {native_parser: config.nativeParser, auth: { user: config.user, password: config.password }},
-            server;
-
-        if (config.replSet && Array.isArray(config.replSet.servers) && config.replSet.servers.length) {
-            var replSet = [];
-
-            replSet.push(new Server( config.host, config.port));
-
-            config.replSet.servers.forEach(function(server) {
-                replSet.push(new Server( server.host, server.port || config.port));
-            });
-
-            _.extend(serverOptions, config.replSet.options || {});
-
-            server = new ReplSet(replSet, serverOptions);
-        }
-        else {
-            server = new Server(config.host, config.port, serverOptions);
-        }
-
-        var db = new Db(config.database, server, {w: safe, native_parser: config.nativeParser});
-
-        db.open(function(err) {
-            if (err) return cb(err);
-
-            if (serverOptions.auth.user && serverOptions.auth.password) {
-                return db.authenticate(serverOptions.auth.user, serverOptions.auth.password, function(err, success) {
-                    if (success) return cb(null, db);
-                    if (db) db.close();
-                    return cb(err ? err : new Error('Could not authenticate user ' + auth[0]), null);
-                });
-            }
-
-            return cb(null, db);
-        });
-    }
-
+    // Expose adapter definition
     return adapter;
+
 })();
