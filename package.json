@@ -32,9 +32,10 @@
     "bcrypt": "*",
     "ejs": "~0.8.5",
     "optimist": "~0.6.0",
-    "sails": "*",
+    "sails": "~0.9.8",
     "sails-disk": "*",
     "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master",
+    "sails-s3": "git://github.com/TakenPilot/sails-s3#master",
     "grunt": "~0.4.2"
   },
   "scripts": {

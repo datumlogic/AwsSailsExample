@@ -14,23 +14,23 @@
         socket.get("/" + itemName, function (items) {
             _.each(items, function (item) {
                 table.append(JST[itemName](item))
-                        .find('#message-' + item.id)
+                        .find('#' + itemName + '-' + item.id)
                         .find('.close').click(remove.bind(this, item.id));
             });
         });
         socket.on('message', function (item) {
-            if (item.model === 'message') {
+            if (item.model === itemName) {
                 switch(item.verb) {
                     case 'create':
                         table.append(JST[itemName](item.data))
-                                .find('#message-' + item.id)
+                                .find('#' + itemName + '-' + item.id)
                                 .find('.close').click(remove.bind(this, item.id));
                         break;
                     case 'destroy':
-                        table.find('#message-' + item.id).remove();
+                        table.find('#' + itemName + '-' + item.id).remove();
                         break;
                     case 'update':
-                        table.find('#message-' + item.id)
+                        table.find('#' + itemName + '-' + item.id)
                                 .replaceWith(JST[itemName](item.data))
                                 .find('.close').click(remove.bind(this, item.id));
                         break;

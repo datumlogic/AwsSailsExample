@@ -33,7 +33,7 @@ module.exports.policies = {
     },
 
     StoredImageController: {
-        '*': 'isAuthenticated'
+        '*': true
     }
 
   /*

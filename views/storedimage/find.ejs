@@ -1,11 +1,71 @@
-<table class="table">
-<% _.each(items, function (item) { %>
-<tr>
-    <% _.each(item, function (value, key) { %>
-        <td>
-            <%=key%>:<%=value%>
-        </td>
-    <% }) %>
-</tr>
-<% }) %>
-</table>
+<table id="viewItems" class="table"></table>
+<form>
+    <label for="body">Photo:</label>
+    <input name="body" type="file" />
+    <button>Upload</button>
+</form>
+<script>
+    $(function () {
+        var itemName = "storedimage";
+        var table = $('#viewItems.table'),
+                form = $('form');
+        function getAll () {
+            socket.get("/" + itemName, function (items) {
+                table.empty();
+                _.each(items, function (item) {
+                    table.append(JST[itemName](item))
+                            .find('#' + itemName + '-' + item.id)
+                            .find('.close').click(remove.bind(this, item.id));
+                });
+            });
+        }
+
+        socket.on('message', function (item) {
+            if (item.model === itemName) {
+                switch(item.verb) {
+                    case 'create':
+                        getAll();
+                        break;
+                    case 'destroy':
+                        table.find('#' + itemName + '-' + item.id).remove();
+                        break;
+                    case 'update':
+                        table.find('#' + itemName + '-' + item.id)
+                                .replaceWith(JST[itemName](item.data))
+                                .find('.close').click(remove.bind(this, item.id));
+                        break;
+                    default:
+                        console.log(item);
+                        break;
+                }
+            } else {
+                console.log(item);
+            }
+        });
+        form.submit(function (e) {
+            e.preventDefault();
+            var data = _.reduce(form.serializeArray(), function (result, obj, key) {
+                result[obj.name] = obj.value;
+                return result;
+            }, {});
+            var fileInput = form.find('input[type=file]');
+            if (fileInput[0] && fileInput[0].files && fileInput[0].files[0]) {
+                var reader = new FileReader();
+                reader.onload = function(e) {
+                    data.body = reader.result;
+
+                    socket.post("/" + itemName, data, function (m1) {
+                        console.log("post", m1);
+                    });
+                };
+                reader.readAsDataURL(fileInput[0].files[0]);
+            }
+        });
+        function remove (id) {
+            socket.delete("/" + itemName + "/" + id, function (m1) {
+                console.log("destroy", m1);
+            });
+        }
+        getAll();
+    })
+</script>

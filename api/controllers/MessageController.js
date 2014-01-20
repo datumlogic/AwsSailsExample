@@ -13,7 +13,7 @@ module.exports = {
 
     },
 
-    find: function (req, res, next) {
+    find: function (req, res) {
         var user = req.session.user,
             id = user.id;
         Message.find({or:[{to:id}, {from:id}]}).done(function (err, data) {
