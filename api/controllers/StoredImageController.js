@@ -33,7 +33,6 @@ module.exports = {
                 console.error(err);
                 res.send(500);
             } else {
-                console.log(data);
                 if (req.socket) {
                     StoredImage.subscribe(req.socket); //listen for creates
                     StoredImage.subscribe(req.socket, data); //listen for updates or deletes on these only
@@ -51,17 +50,34 @@ module.exports = {
         var user = req.session.user,
             body = req.param("body");
 
-        StoredImage.create({
-            //owner: user.id,
-            body: body
-        }).done(function (err, msg) {
-                if (err) {
-                    console.log(err);
-                    res.send(err, 400);
-                } else {
-                    StoredImage.publishCreate(msg.toJSON());
-                    res.send(msg);
-                }
+        console.log("what");
+        console.log(body.substring(0, 30));
+        console.log(body.replace("data:image/jpeg;base64,", "").substring(0, 30));
+
+        LocalFile.resizeBuffer(new Buffer(body.replace("data:image/jpeg;base64,", ""), "base64"), "test.jpg", 50, 50,
+            function (meta, stream) {
+
+            stream.on('error', function (err, data) {
+                console.log("error", err, data);
             });
+
+            StoredImage.create({
+                //owner: user.id,
+                body: stream,
+                meta: meta
+            }).done(function (err, msg) {
+                    if (err) {
+                        console.log(err);
+                        res.send(err, 400);
+                    } else {
+                        StoredImage.publishCreate(msg.toJSON());
+                        res.send(msg);
+                    }
+                });
+        });
+
+
+
+
     }
 };
