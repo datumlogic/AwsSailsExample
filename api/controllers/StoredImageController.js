@@ -50,15 +50,13 @@ module.exports = {
         var user = req.session.user,
             body = req.param("body");
 
-        console.log("what");
-        console.log(body.substring(0, 30));
-        console.log(body.replace("data:image/jpeg;base64,", "").substring(0, 30));
+        var buffer = new Buffer(body.replace("data:image/jpeg;base64,", ""), "base64");
 
-        LocalFile.resizeBuffer(new Buffer(body.replace("data:image/jpeg;base64,", ""), "base64"), "test.jpg", 50, 50,
+        FileService.resizeStreamedFile(buffer, "test.jpg", 50, 50,
             function (meta, stream) {
 
-            stream.on('error', function (err, data) {
-                console.log("error", err, data);
+            stream.on('error', function (err) {
+                console.error("error", err);
             });
 
             StoredImage.create({
@@ -75,9 +73,5 @@ module.exports = {
                     }
                 });
         });
-
-
-
-
     }
 };

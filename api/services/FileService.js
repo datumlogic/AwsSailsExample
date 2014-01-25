@@ -19,7 +19,7 @@ module.exports = {
      * @param {integer|null} height
      * @param {function} cb
      */
-    resizeBuffer: function (buf, filename, width, height, cb) {
+    resizeStreamedFile: function (buf, filename, width, height, cb) {
         gm(buf, filename)
             .identify(function (err, meta) {
                 console.log("meta", err, meta);
