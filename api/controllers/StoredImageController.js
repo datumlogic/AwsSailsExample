@@ -28,44 +28,68 @@ module.exports = {
     find: function (req, res) {
         //var user = req.session.user,
         //    id = user.id;
-        StoredImage.find().done(function (err, data) {
-            if (err) {
-                console.error(err);
-                res.send(500);
-            } else {
-                if (req.socket) {
-                    StoredImage.subscribe(req.socket); //listen for creates
-                    StoredImage.subscribe(req.socket, data); //listen for updates or deletes on these only
+        var id = req.param('id');
+        if (id) {
+            BaseController.findOne(StoredImage, id, req, res, function (item) {
+                /**
+                 * For stored images, we want to return them as base64.  The client should be requesting them
+                 * with an XHR, and should be prepared for the request to fail (perhaps due to permissions).
+                 *
+                 * If they successfully get the image with the XHR, then they can put it in an img tag.
+                 */
+                if (item && item.Body) {
+                    if (item.Metadata && item.Metadata.base64prefix) {
+                        item.Body = item.Metadata.base64prefix + item.Body.toString('base64');
+                    }
                 }
-                if (req.isJson || req.isSocket) {
-                    res.send(data);
-                } else {
-                    res.view({items: data});
-                }
-            }
-        });
+
+                return item;
+            });
+        } else {
+            BaseController.findMany(StoredImage, req, res);
+        }
     },
 
     create: function (req, res) {
         var user = req.session.user,
             body = req.param("body");
 
-        var buffer = new Buffer(body.replace("data:image/jpeg;base64,", ""), "base64");
+        var base64Prefix = /^[^,]*/.exec(body)[0] + ",";
+        body = body.substring(base64Prefix.length);
+        var buffer = new Buffer(body, "base64"),
+            Metadata = {
+                base64prefix: base64Prefix
+            };
 
-        FileService.resizeStreamedFile(buffer, "test.jpg", 50, 50,
-            function (meta, stream) {
+        FileService.resizeStreamedFile(buffer, "jpg", 800, 600,
+            function (meta, data) {
 
-            stream.on('error', function (err) {
-                console.error("error", err);
-            });
+                if (Buffer.isBuffer(data)) {
+                    console.log("isBuffer", data.toString('base64').substring(0, 100))
+                }
+
+                if (data.on) {
+                    data.on('error', function (err) {
+                        console.error(JSON.stringify(err));
+                    });
+                }
+
+            if (meta) {
+                _.extend(Metadata, {
+                    format: meta.format,
+                    mimeType: meta['Mime type'],
+                    width: meta.size.width.toString(),
+                    height: meta.size.height.toString()
+                });
+            }
 
             StoredImage.create({
                 //owner: user.id,
-                body: stream,
-                meta: meta
+                Body: data,
+                Metadata: Metadata
             }).done(function (err, msg) {
                     if (err) {
-                        console.log(err);
+                        console.error(JSON.stringify(err));
                         res.send(err, 400);
                     } else {
                         StoredImage.publishCreate(msg.toJSON());

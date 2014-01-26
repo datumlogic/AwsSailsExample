@@ -9,13 +9,26 @@
         var itemName = "storedimage";
         var table = $('#viewItems.table'),
                 form = $('form');
+
+        function getOne (item, el) {
+            socket.get("/" + itemName + "/" + item.id, function (data) {
+                el.popover({
+                    placement: "bottom",
+                    html: true,
+                    content: "<img src='" + data.Body + "' />"
+                });
+            });
+            el.find('.close').click(remove.bind(this, item.id, el));
+        }
+
         function getAll () {
             socket.get("/" + itemName, function (items) {
                 table.empty();
                 _.each(items, function (item) {
-                    table.append(JST[itemName](item))
-                            .find('#' + itemName + '-' + item.id)
-                            .find('.close').click(remove.bind(this, item.id));
+                    var el = table.append(JST[itemName](item))
+                            .find('#' + itemName + '-' + item.id);
+
+                    getOne(item, el);
                 });
             });
         }
@@ -61,7 +74,8 @@
                 reader.readAsDataURL(fileInput[0].files[0]);
             }
         });
-        function remove (id) {
+        function remove (id, el) {
+            el.popover('destroy');
             socket.delete("/" + itemName + "/" + id, function (m1) {
                 console.log("destroy", m1);
             });

@@ -10,8 +10,12 @@ module.exports = {
 
     adapter: 's3',
     attributes: {
-        "body": {
-            type: "string",
+        "Body": {
+            type: "binary",
+            required: true
+        },
+        "Metadata": {
+            type: "json",
             required: true
         }
     }

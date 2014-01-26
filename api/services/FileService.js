@@ -22,19 +22,11 @@ module.exports = {
     resizeStreamedFile: function (buf, filename, width, height, cb) {
         gm(buf, filename)
             .identify(function (err, meta) {
-                console.log("meta", err, meta);
-
                 var stream =  gm(buf, filename)
                     .resize(width, height)
-                    .stream();
-
-                gm(stream, filename).identify(function (err, meta) {
-                    console.log("meta2", err, meta);
-                });
-
-                cb(meta, stream);
-
-
+                    .toBuffer(function (err, buffer) {
+                        cb(meta, buffer);
+                    });
             });
     },
 
