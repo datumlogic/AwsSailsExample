@@ -25,8 +25,20 @@ module.exports.adapters = {
   },
 
     s3: {
-        module: 'sails-s3-temp',
+        module: 'sails-s3',
         bucketName: "ci0k10u9fexsopeay5vyavmx6q"
+    },
+
+    rds: {
+        module: 'sails-rds'
+    },
+
+    dynamodb: {
+        module: 'sails-dynamodb'
+    },
+
+    memory: {
+        module: 'sails-memory'
     },
 
   // MySQL is the world's most popular relational database.

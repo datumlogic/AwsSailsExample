@@ -48,8 +48,7 @@ module.exports = {
             Message.create({
                 from: user.id,
                 to: parseInt(to),
-                text: text,
-                sendTime: new Date()
+                text: text
             }).done(function (err, msg) {
                     if (err) {
                         console.log(err);

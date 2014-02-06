@@ -27,20 +27,26 @@
     "web": "http://github.com/TakenPilot/AwsSailsExample/issues/"
   },
   "dependencies": {
-    "underscore": "*",
-    "aws-sdk": "*",
-    "bcrypt": "*",
+    "underscore": "~1.5.2",
+    "aws-sdk": "~2.0.0-rc9",
+    "bcrypt": "~0.7.7",
     "ejs": "~0.8.5",
     "optimist": "~0.6.0",
     "sails": "~0.9.8",
     "sails-disk": "*",
     "sails-dynamodb": "git://github.com/TakenPilot/sails-dynamodb#master",
     "sails-s3": "git://github.com/TakenPilot/sails-s3#master",
-    "grunt": "~0.4.2",
+    "sails-rds": "git://github.com/TakenPilot/sails-rds#master",
     "temp": "~0.6.0",
-    "gm": "~1.14.2"
+    "gm": "~1.14.2",
+    "winston": "~0.7.2",
+    "sails-memory": "~0.9.1"
   },
   "scripts": {
     "start": "sails lift"
+  },
+  "devDependencies": {
+    "grunt": "~0.4.2",
+    "grunt-contrib-compress": "~0.6.1"
   }
 }

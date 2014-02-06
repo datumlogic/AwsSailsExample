@@ -8,6 +8,7 @@
 
 module.exports = {
 
+    adapter: "memory",
     schema: true,
     attributes: {
 
@@ -28,11 +29,6 @@ module.exports = {
             required: true,
             minLength: 1,
             maxLength: 144
-        },
-
-        sendTime: {
-            type: 'datetime',
-            required: true
         }
     }
 

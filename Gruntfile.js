@@ -105,6 +105,7 @@ module.exports = function (grunt) {
   grunt.loadTasks(depsPath + '/grunt-contrib-cssmin/tasks');
   grunt.loadTasks(depsPath + '/grunt-contrib-less/tasks');
   grunt.loadTasks(depsPath + '/grunt-contrib-coffee/tasks');
+  grunt.loadNpmTasks('grunt-contrib-compress');
 
   // Project configuration.
   grunt.initConfig({
@@ -220,6 +221,18 @@ module.exports = function (grunt) {
       dist: {
         src: ['.tmp/public/concat/production.css'],
         dest: '.tmp/public/min/production.css'
+      }
+    },
+
+    compress: {
+      main: {
+          options: {
+              archive: '../archive.zip'
+          },
+          files: [{
+              dot: true,
+              src: ['**', '!node_modules/**', '!.git/**', '!.gitignore', '!.idea/**', '!test/**']
+          }]
       }
     },
 
@@ -438,4 +451,9 @@ module.exports = function (grunt) {
     'sails-linker:prodStylesJADE',
     'sails-linker:devTplJADE'
   ]);
+
+    grunt.registerTask('deploy', [
+        'prod',
+        'compress'
+    ])
 };
