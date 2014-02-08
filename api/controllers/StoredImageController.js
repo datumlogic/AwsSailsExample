@@ -1,3 +1,5 @@
+/*globals FileService, Buffer, StoredImage */
+
 /**
  * StoredImageController
  *
@@ -14,6 +16,25 @@
  *
  * @docs        :: http://sailsjs.org/#!documentation/controllers
  */
+
+var log = log || console.log;
+
+function applyStringifyAndFlattenTo (from, to) {
+    if (from && to) {
+        var metaTags = ['format', 'Mime type', 'size'];
+        _.each(metaTags, function (value) {
+            if (_.isString(from[value]) || _.isNumber(from[value])) {
+                to[value] = from[value].toString();
+            } else if (_.isObject(from[value])) {
+                _.forOwn(from[value], function (value, key) {
+                    if (_.isString(from[value]) || _.isNumber(from[value])) {
+                        to[key] = value.toString();
+                    }
+                })
+            }
+        });
+    }
+}
 
 module.exports = {
 
@@ -61,27 +82,20 @@ module.exports = {
                 base64prefix: base64Prefix
             };
 
-        FileService.resizeStreamedFile(buffer, "jpg", 800, 600,
-            function (meta, data) {
+        FileService.resizeStreamedFile(buffer, "jpg", 800, 600, function (meta, data) {
 
-                if (Buffer.isBuffer(data)) {
-                    console.log("isBuffer", data.toString('base64').substring(0, 100))
-                }
+            if (Buffer.isBuffer(data)) {
+                log("isBuffer", data.toString('base64').substring(0, 100))
+            }
 
-                if (data.on) {
-                    data.on('error', function (err) {
-                        console.error(JSON.stringify(err));
-                    });
-                }
-
-            if (meta) {
-                _.extend(Metadata, {
-                    format: meta.format,
-                    mimeType: meta['Mime type'],
-                    width: meta.size.width.toString(),
-                    height: meta.size.height.toString()
+            if (data.on) {
+                data.on('error', function (err) {
+                    console.error(JSON.stringify(err));
                 });
             }
+
+            applyStringifyAndFlattenTo(meta, Metadata);
+            log("metadata", Metadata);
 
             StoredImage.create({
                 //owner: user.id,

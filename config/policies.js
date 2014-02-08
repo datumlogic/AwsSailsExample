@@ -33,9 +33,9 @@ module.exports.policies = {
     },
 
     StoredImageController: {
-        'create': ["isAuthenticated", "isSelf"],
-        'destroy': ["isAuthenticated", "isSelf"],
-        'update': ["isAuthenticated", "isSelf"],
+        'create': ["isAuthenticated"],
+        'destroy': ["isAuthenticated"],
+        'update': ["isAuthenticated"],
         '*': "isAuthenticated"
     },
 
